@@ -16,9 +16,14 @@ require (
 
 require (
 	github.com/jessyekessia/microservices-proto/golang/order v0.0.0-00010101000000-000000000000
+	github.com/jessyekessia/microservices-proto/golang/payment v0.0.0-00010101000000-000000000000
 	google.golang.org/grpc v1.81.1
 	gorm.io/driver/mysql v1.6.0
 	gorm.io/gorm v1.31.1
 )
 
-replace github.com/jessyekessia/microservices-proto/golang/order => ../../microservices-proto/src/microservices-proto/golang/order
+replace github.com/jessyekessia/microservices-proto/golang/order => ../../microservices-proto/microservices-proto/golang/order
+
+replace github.com/jessyekessia/microservices-proto/golang/payment => ../../microservices-proto/microservices-proto/golang/payment
+
+

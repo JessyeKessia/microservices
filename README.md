@@ -1,85 +1,84 @@
-# 📋 Sistema de Microsserviço de Pedidos (Order Service)
+# 📋 Sistema de Microsserviços de Pedidos e Pagamentos (Order & Payment)
 
-Este projeto implementa o microsserviço de gerenciamento de pedidos (`order`) utilizando a **Arquitetura Hexagonal** (Ports and Adapters) na linguagem Go, com comunicação via **gRPC** e persistência em banco de dados **MySQL**.
+Este projeto implementa uma arquitetura de microsserviços distribuídos utilizando a **Arquitetura Hexagonal** (Ports and Adapters) na linguagem Go. O sistema é composto por dois serviços principais que se comunicam internamente via **gRPC** e utilizam bancos de dados **MySQL** isolados através do Docker.
+
+---
+
+## 🏗️ Fluxo de Comunicação do Sistema
+
+[Cliente (grpcurl/Postman)]
+│
+▼ (gRPC na Porta 3000)
+┌──────────────┐
+│  Order Svc   │ ───► [Banco MySQL: order]
+└──────────────┘
+│
+▼ (gRPC na Porta 3001 - PAYMENT_SERVICE_URL)
+┌──────────────┐
+│ Payment Svc  │ ───► [Banco MySQL: payment]
+└──────────────┘
+
+1. O **Cliente** faz uma requisição de criação de pedido para o serviço **Order** (`localhost:3000`).
+2. O serviço **Order** registra as informações no seu banco de dados local (`order`).
+3. O serviço **Order** realiza uma chamada gRPC interna para o serviço **Payment** (`localhost:3001`) enviando os dados de cobrança.
+4. O serviço **Payment** processa e persiste a transação em seu respectivo banco de dados (`payment`).
+5. Se tudo der certo, o **Order** finaliza o fluxo e retorna o ID da compra para o cliente.
 
 ---
 
 ## 🛠️ Pré-requisitos
 
 Antes de iniciar, certifique-se de ter instalado em sua máquina:
-
-* **Go** (versão 1.23 ou superior)
+* **Go** (versão 1.18 ou superior)
 * **Docker** e **Docker Compose**
-* **Protobuf Compiler (`protoc`)**
 * **grpcurl** (para testes de rota via terminal)
 
 ---
 
 ## 🚀 Como Executar o Sistema
 
-Siga o passo a passo abaixo em terminais separados:
+Siga o passo a passo executando os comandos em terminais separados.
 
-### 1. Subir o Banco de Dados (MySQL)
-
-O sistema necessita de uma instância do MySQL rodando. Execute o comando abaixo para subir o banco via Docker em segundo plano:
-
-```bash
-docker run --name mysql-order -p 3306:3306 -e MYSQL_ROOT_PASSWORD=minhasenha -e MYSQL_DATABASE=order -d mysql:latest
-
-```
-
-### 2. Configurar as Variáveis de Ambiente
-
-Crie um arquivo chamado `.env` na raiz da pasta `order` com o seguinte conteúdo:
-
-```text
-ENV=development
-APPLICATION_PORT=3000
-DATA_SOURCE_URL=root:minhasenha@tcp(127.0.0.1:3306)/order
-
-```
-
-### 3. Iniciar o Servidor Go
-
-Com o banco de dados ativo, execute o comando abaixo na raiz da pasta `order` para injetar as variáveis e iniciar o servidor gRPC:
+### 1. Subir o Banco de Dados (MySQL via Docker)
+O sistema precisa de duas bases de dados (`order` e `payment`). Certifique-se de estar na pasta raiz do projeto onde está o arquivo `init.sql` e execute:
 
 ```bash
-export $(cat .env | xargs) && go run cmd/main.go
+docker run -p 3306:3306 -e MYSQL_ROOT_PASSWORD=minhasenha -v "$(pwd)/init.sql:/docker-entrypoint-initdb.d/init.sql" mysql
+2. Iniciar o Microsserviço de Pagamento (Payment Service)
+Abra um segundo terminal, navegue até a pasta do serviço de pagamento e execute o comando abaixo para injetar as configurações e ligar o servidor gRPC na porta 3001:
 
-```
+Bash
+cd payment
+DB_DRIVER=mysql DATA_SOURCE_URL="root:minhasenha@tcp(127.0.0.1:3306)/payment" APPLICATION_PORT=3001 ENV=development go run cmd/main.go
+💡 Nota: O terminal ficará travado aguardando conexões. Isso significa que o servidor de pagamentos está online.
 
-> 💡 *Nota: O terminal ficará travado exibindo logs. Isso significa que o servidor está online e escutando a porta `3000` com sucesso.*
+3. Iniciar o Microsserviço de Pedidos (Order Service)
+Abra um terceiro terminal, navegue até a pasta do serviço de pedidos e informe a URL do serviço de pagamentos através da variável PAYMENT_SERVICE_URL. Ligue o servidor gRPC na porta 3000:
 
----
+Bash
+cd order
+DB_DRIVER=mysql DATA_SOURCE_URL="root:minhasenha@tcp(127.0.0.1:3306)/order" APPLICATION_PORT=3000 ENV=development PAYMENT_SERVICE_URL="localhost:3001" go run cmd/main.go
+🧪 Como Testar a Integração (gRPC)
+Como o sistema utiliza gRPC, você não conseguirá testar pelo navegador. Abra um quarto terminal e dispare a requisição utilizando o grpcurl:
 
-## 🧪 Como Testar a API (gRPC)
+Bash
+grpcurl -d '{"costumer_id": 123, "order_items": [{"product_code": "prod_1", "quantity": 4, "unit_price": 12.5}], "total_price": 50.0}' -plaintext localhost:3000 order.Order/Create
+🔍 O que valida o sucesso do teste?
+No terminal de envio: Você receberá um objeto JSON contendo o ID do pedido gerado com sucesso.
 
-Como o sistema utiliza gRPC, a validação deve ser feita por ferramentas de teste específicas, não pelo navegador.
+No terminal do Order: Verá os logs de criação de pedido e a chamada gRPC sendo enviada para o Payment.
 
-### Opção 1: Usando o `grpcurl` (Terminal)
+No terminal do Payment: Verá os logs piscando instantaneamente, confirmando que recebeu a ordem de cobrança vinda do serviço de Order.
 
-Abra um **novo terminal** e execute o comando abaixo para simular a criação de um pedido:
+📁 Estrutura Organizacional (Arquitetura Hexagonal)
+Ambos os projetos seguem rigidamente a divisão de responsabilidades dos Ports and Adapters:
 
-```bash
-grpcurl -d '{"customer_id": 123, "order_items": [{"product_code": "prod_1", "quantity": 4, "unit_price": 12.5}]}' -plaintext localhost:3000 order.Order/Create
+cmd/main.go: Inicializa a aplicação, injeta as dependências e sob os adaptadores de servidor.
 
-```
+config/: Centraliza e isola a leitura das variáveis de ambiente de forma segura.
 
-### Opção 2: Usando o Postman
+internal/application/core/: O "coração" da aplicação. Contém as regras de negócio puras (Entidades e Casos de Uso/APIs). Não possui dependência de frameworks ou bancos de dados.
 
-1. Abra o Postman e clique em **New** > **gRPC Request**.
-2. No campo de URL, digite `localhost:3000`.
-3. Se a reflexão estiver ativa no servidor, o Postman irá carregar automaticamente o método `order.Order/Create`.
-4. Cole o JSON de teste no corpo (Body) e clique em **Invoke**.
+internal/ports/: Contratos e interfaces que definem como o mundo externo pode entrar (Inbound Ports) e como o sistema se comunica com o mundo externo (Outbound Ports).
 
----
-
-## 📁 Estrutura do Projeto
-
-O design segue rigidamente os conceitos de Arquitetura Hexagonal:
-
-* `cmd/main.go`: Ponto de entrada que inicializa os adaptadores e injeta as dependências no Core.
-* `config/`: Centraliza a leitura rigorosa das variáveis de ambiente do sistema.
-* `internal/application/core/`: Contém as regras de negócio puras (Entidades de Domínio e Serviços).
-* `internal/ports/`: Contrato das interfaces de entrada (API) e saída (DB).
-* `internal/adapters/`: Implementações tecnológicas do mundo externo (Servidor gRPC e Driver do Banco).
+internal/adapters/: Implementações tecnológicas. Aqui ficam os drivers do banco de dados (MySQL/GORM) e os servidores/clientes de rede (gRPC).
