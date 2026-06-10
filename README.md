@@ -6,17 +6,8 @@ Este projeto implementa uma arquitetura de microsserviços distribuídos utiliza
 
 ## 🏗️ Fluxo de Comunicação do Sistema
 
-[Cliente (grpcurl/Postman)]
-│
-▼ (gRPC na Porta 3000)
-┌──────────────┐
-│  Order Svc   │ ───► [Banco MySQL: order]
-└──────────────┘
-│
-▼ (gRPC na Porta 3001 - PAYMENT_SERVICE_URL)
-┌──────────────┐
-│ Payment Svc  │ ───► [Banco MySQL: payment]
-└──────────────┘
+<img width="1693" height="929" alt="image" src="https://github.com/user-attachments/assets/4a31ff0c-c312-475d-9056-0cf03dadb52d" />
+
 
 1. O **Cliente** faz uma requisição de criação de pedido para o serviço **Order** (`localhost:3000`).
 2. O serviço **Order** registra as informações no seu banco de dados local (`order`).
@@ -51,6 +42,8 @@ Abra um segundo terminal, navegue até a pasta do serviço de pagamento e execut
 
 ```bash
 cd payment
+```
+```bash
 DB_DRIVER=mysql DATA_SOURCE_URL="root:minhasenha@tcp(127.0.0.1:3306)/payment" APPLICATION_PORT=3001 ENV=development go run cmd/main.go
 ```
 💡 Nota: O terminal ficará travado aguardando conexões. Isso significa que o servidor de pagamentos está online.
@@ -59,6 +52,8 @@ DB_DRIVER=mysql DATA_SOURCE_URL="root:minhasenha@tcp(127.0.0.1:3306)/payment" AP
 Abra um terceiro terminal, navegue até a pasta do serviço de pedidos e informe a URL do serviço de pagamentos através da variável PAYMENT_SERVICE_URL. Ligue o servidor gRPC na porta 3000:
 ```bash
 cd order
+```
+```bash
 DB_DRIVER=mysql DATA_SOURCE_URL="root:minhasenha@tcp(127.0.0.1:3306)/order" APPLICATION_PORT=3000 ENV=development PAYMENT_SERVICE_URL="localhost:3001" go run cmd/main.go
 ```
 
