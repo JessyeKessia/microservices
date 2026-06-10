@@ -1,8 +1,8 @@
 package api
 
 import (
-	"github.com/JessyeKessia/microservices/order/internal/application/core/domain"
-	"github.com/JessyeKessia/microservices/order/internal/ports"
+	"github.com/jessyekessia/microservices/order/internal/application/core/domain"
+	"github.com/jessyekessia/microservices/order/internal/ports"
 )
 
 type Application struct {
