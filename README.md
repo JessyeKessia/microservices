@@ -44,26 +44,32 @@ O sistema precisa de duas bases de dados (`order` e `payment`). Certifique-se de
 
 ```bash
 docker run -p 3306:3306 -e MYSQL_ROOT_PASSWORD=minhasenha -v "$(pwd)/init.sql:/docker-entrypoint-initdb.d/init.sql" mysql
+```
+
 2. Iniciar o Microsserviço de Pagamento (Payment Service)
 Abra um segundo terminal, navegue até a pasta do serviço de pagamento e execute o comando abaixo para injetar as configurações e ligar o servidor gRPC na porta 3001:
 
-Bash
+```bash
 cd payment
 DB_DRIVER=mysql DATA_SOURCE_URL="root:minhasenha@tcp(127.0.0.1:3306)/payment" APPLICATION_PORT=3001 ENV=development go run cmd/main.go
+```
 💡 Nota: O terminal ficará travado aguardando conexões. Isso significa que o servidor de pagamentos está online.
 
 3. Iniciar o Microsserviço de Pedidos (Order Service)
 Abra um terceiro terminal, navegue até a pasta do serviço de pedidos e informe a URL do serviço de pagamentos através da variável PAYMENT_SERVICE_URL. Ligue o servidor gRPC na porta 3000:
-
-Bash
+```bash
 cd order
 DB_DRIVER=mysql DATA_SOURCE_URL="root:minhasenha@tcp(127.0.0.1:3306)/order" APPLICATION_PORT=3000 ENV=development PAYMENT_SERVICE_URL="localhost:3001" go run cmd/main.go
-🧪 Como Testar a Integração (gRPC)
+```
+
+## 🧪 Como Testar a Integração (gRPC)
 Como o sistema utiliza gRPC, você não conseguirá testar pelo navegador. Abra um quarto terminal e dispare a requisição utilizando o grpcurl:
 
-Bash
+```bash
 grpcurl -d '{"costumer_id": 123, "order_items": [{"product_code": "prod_1", "quantity": 4, "unit_price": 12.5}], "total_price": 50.0}' -plaintext localhost:3000 order.Order/Create
-🔍 O que valida o sucesso do teste?
+```
+
+## 🔍 O que valida o sucesso do teste?
 No terminal de envio: Você receberá um objeto JSON contendo o ID do pedido gerado com sucesso.
 
 No terminal do Order: Verá os logs de criação de pedido e a chamada gRPC sendo enviada para o Payment.
