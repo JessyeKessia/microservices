@@ -1,7 +1,9 @@
 package domain
 
-import "time"
-
+import (
+	"time"
+	"errors"
+)
 type OrderItem struct {
 	ProductCode string  `json:"product_code"`
 	UnitPrice   float32 `json:"unit_price"`
@@ -15,6 +17,7 @@ type Order struct {
 	OrderItems []OrderItem `json:"order_items"`
 	CreatedAt  int64       `json:"created_at"`
 }
+
 
 func NewOrder(customerId int64, orderItems []OrderItem) Order {
 	return Order{
@@ -31,4 +34,19 @@ func (o * Order) TotalPrice () float32 {
 		totalPrice += orderItem . UnitPrice * float32 ( orderItem . Quantity )
 	}
 	return totalPrice
+}
+
+func (o *Order) Validate() error {
+	var ErrTooManyItems = errors.New("order has more than 50 items")
+	var total int32
+
+	for _, item := range o.OrderItems {
+		total += item.Quantity
+	}
+
+	if total > 50 {
+		return ErrTooManyItems
+	}
+
+	return nil
 }

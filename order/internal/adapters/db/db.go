@@ -123,3 +123,15 @@ func (a Adapter) Save(
 
 	return res.Error
 }
+
+func (a Adapter) Update(
+	id int64,
+	status string,
+) error {
+
+	res := a.db.Model(&Order{}).
+		Where("id = ?", id).
+		Update("status", status)
+
+	return res.Error
+}
