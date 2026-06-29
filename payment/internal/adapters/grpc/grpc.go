@@ -3,6 +3,7 @@ package grpc
 import (
 	"context"
 	"fmt"
+    // "time"
 
 	"github.com/jessyekessia/microservices-proto/golang/payment"
 	"github.com/jessyekessia/microservices/payment/internal/application/core/domain"
@@ -13,6 +14,9 @@ import (
 
 func (a Adapter) Create(ctx context.Context, request *payment.CreatePaymentRequest,
 ) (*payment.CreatePaymentResponse, error) {
+
+    // Simula processamento demorado
+    // time.Sleep(3 * time.Second)
 
     log.WithContext(ctx).Info("Creating payment...")
 
@@ -36,4 +40,8 @@ func (a Adapter) Create(ctx context.Context, request *payment.CreatePaymentReque
     }
 
     return &payment.CreatePaymentResponse{ PaymentId: result.ID}, nil
+    // teste do deadline
+    // log.WithContext(ctx).Info("Tentativa recebida")
+    // return nil, status.Error(codes.Unavailable, "Serviço indisponível")
+
 }
