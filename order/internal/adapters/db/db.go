@@ -26,6 +26,13 @@ type OrderItem struct {
 	OrderID     uint
 }
 
+type StockItem struct {
+	gorm.Model
+	ProductCode string `gorm:"uniqueIndex"`
+	Description string
+	Quantity    int32
+}
+
 type Adapter struct {
 	db *gorm.DB
 }
@@ -49,6 +56,7 @@ func NewAdapter(
 	err := db.AutoMigrate(
 		&Order{},
 		&OrderItem{},
+		&StockItem{},
 	)
 
 	if err != nil {
@@ -122,6 +130,18 @@ func (a Adapter) Save(
 	}
 
 	return res.Error
+}
+
+func (a Adapter) ProductExists(productCode string) (bool, error) {
+	var item StockItem
+	res := a.db.Where("product_code = ?", productCode).First(&item)
+	if res.Error == gorm.ErrRecordNotFound {
+		return false, nil
+	}
+	if res.Error != nil {
+		return false, res.Error
+	}
+	return true, nil
 }
 
 func (a Adapter) Update(

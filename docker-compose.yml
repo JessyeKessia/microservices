@@ -1,0 +1,70 @@
+version: "3.9"
+
+services:
+
+  mysql:
+    image: mysql:8
+    container_name: mysql-micro
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: minhasenha
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-pminhasenha"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  payment:
+    build:
+      context: ./payment
+    container_name: payment-service
+    restart: always
+    environment:
+      DATA_SOURCE_URL: "root:minhasenha@tcp(mysql:3306)/payment"
+      APPLICATION_PORT: "3001"
+      ENV: development
+    ports:
+      - "3001:3001"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  shipping:
+    build:
+      context: ./shipping
+    container_name: shipping-service
+    restart: always
+    environment:
+      DATA_SOURCE_URL: "root:minhasenha@tcp(mysql:3306)/shipping"
+      APPLICATION_PORT: "3002"
+      ENV: development
+    ports:
+      - "3002:3002"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  order:
+    build:
+      context: ./order
+    container_name: order-service
+    restart: always
+    environment:
+      DATA_SOURCE_URL: "root:minhasenha@tcp(mysql:3306)/order"
+      APPLICATION_PORT: "3000"
+      ENV: development
+      PAYMENT_SERVICE_URL: "payment:3001"
+      SHIPPING_SERVICE_URL: "shipping:3002"
+    ports:
+      - "3000:3000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      payment:
+        condition: service_started
+      shipping:
+        condition: service_started
